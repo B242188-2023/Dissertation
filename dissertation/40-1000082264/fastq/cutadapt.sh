@@ -20,6 +20,6 @@ do
 
   # Step 4: Use clumpify remove repeated sequences 
   clumpify.sh in=${sample}_R1_headtrimmed.fastq out=${sample}_R1_dedup.fastq dedupe
-  clumpify.sh in=${sample}_R2_headtrimmed.fastq out=${sample}_R1_dedup.fastq dedupe
+  clumpify.sh in=${sample}_R2_headtrimmed.fastq out=${sample}_R2_dedup.fastq dedupe
 done
 echo "Adapter trimming completed for all samples."
