@@ -1,8 +1,9 @@
 library(DESeq2)
-setwd("/Users/chenziyin/Downloads/Dissertation")
-
+#setwd("/Users/chenziyin/Downloads/Dissertation")
+setwd('/localdisk/home/s2558632/dissertation/40-1000082264/annotation')
 # 样本名称
 sampleNames <- c("LD1", "LD2", "LL1", "LL2", "SD1", "SD2", "SL1", "SL2")
+
 for (name in sampleNames) {
   file_path <- paste0(name, "_counts.txt")
   data <- read.table(file_path, header = TRUE, row.names = 1)
@@ -28,7 +29,7 @@ comparisons <- list(
 library(rtracklayer)
 
 # 读取GFF3文件
-gff3_file <- "AeUmbellulata_TA1851_v1.gff3"
+gff3_file <- "../alignment/AeUmbellulata_TA1851_v1.gff3"
 gff3_data <- import(gff3_file, format = "gff3")
 
 library(stringr)
@@ -70,14 +71,15 @@ for (comparison in names(comparisons)) {
   #log2FC≤-1 & padj<0.01 标识 down，代表显著下调的基因
   #其余标识 none，代表非差异的基因
   #5e-324范围内，超出这个范围就显示为0.000000e+00
-  res1[which(res1$log2FoldChange >= 1 & res1$padj < 0.01 & res1$baseMean >= 100), 'sig'] <- 'up'
-  res1[which(res1$log2FoldChange <= -1 & res1$padj < 0.01 & res1$baseMean >= 100), 'sig'] <- 'down'
-  res1[which(abs(res1$log2FoldChange) < 1 | res1$padj >= 0.01 | res1$baseMean < 100), 'sig'] <- 'none'
-  
+  res1[which(res1$log2FoldChange >= 1 & res1$padj < 0.05 & res1$baseMean >= 100), 'sig'] <- 'up'
+  res1[which(res1$log2FoldChange <= -1 & res1$padj < 0.05 & res1$baseMean >= 100), 'sig'] <- 'down'
+  res1[which(abs(res1$log2FoldChange) < 1 | res1$padj >= 0.05 | res1$baseMean < 100), 'sig'] <- 'none'
+  #LL& SL
+  #LD&SD top25
   
   res1$ensembl_gene_id <- rownames(res1)
   merged_results <- merge(gene_annotations, res1, by.x = "ID",
-                          by.y = "ensembl_gene_id", all.x = TRUE, all.y = T)
+                          by.y = "ensembl_gene_id", all.x = F, all.y = T)
   res1$ensembl_gene_id <- NULL
   write.table(merged_results, file = paste0(comparison, '_gene_info.txt'), sep = '\t',
               col.names = NA, quote = F)
@@ -96,12 +98,12 @@ for (comparison in names(comparisons)) {
   library(ggplot2)
   library(pheatmap)
 
-  # 筛选前10个差异显著的基因
-  top5 <- merged_results[order(merged_results$padj, -abs(merged_results$log2FoldChange)), ][1:5, ]
-  top5_up <- res1_up[order(res1_up$padj, -abs(res1_up$log2FoldChange)), ][1:5, ]
-  top5_down <- res1_down[order(res1_down$padj, -abs(res1_down$log2FoldChange)), ][1:5, ]
-  highlight_genes <- rbind(top5, top5_up, top5_down)
-  #write.table(highlight_genes,file = paste0(comparison,'.highlight.txt'),sep = '\t', col.name = NA, quote = F)
+  # 筛选前25个差异显著的基因
+  top25 <- merged_results[order(-abs(merged_results$log2FoldChange), merged_results$padj), ][1:25, ]
+  top25_up <- res1_up[order(-abs(res1_up$log2FoldChange), res1_up$padj), ][1:25, ]
+  top25_down <- res1_down[order(-abs(res1_down$log2FoldChange), res1_down$padj), ][1:25, ]
+  highlight_genes <- rbind(top25, top25_up, top25_down)
+  write.table(highlight_genes,file = paste0(comparison,'.highlight.txt'),sep = '\t', col.name = NA, quote = F)
   #highlight_genes <- rbind(res1_up,res1_down)
   #target <- c('AeUmb.TA1851.r1.4UG0030010',
               #'AeUmb.TA1851.r1.5UG0039190',
@@ -169,8 +171,9 @@ for (comparison in names(comparisons)) {
            annotation_row = row_annotation, # 添加行注释
            color = colorRampPalette(c("#D72E25", "#F46D43", "#FEE08B","#FFFFBF","#A6D96A","#1A9850"))(50),
            cutree_rows = 4,
-           fontsize_col = 5,
-           angle_col = 45)
+           fontsize_col = 10,
+           angle_col = 45,
+           annotation_legend = FALSE)
   
   # 保存热图
   ggsave(filename = paste0(comparison, '_heatmap.png'), plot = heatmap)
@@ -217,27 +220,204 @@ venn.diagram(
   cat.col = c("#D72E25", "#F46D43", "#1A9850", "#A6D96A"),
   main = "Venn Diagram of Differentially Expressed Genes"
 )
+LD_SD_highlight_75 <- read.table("LD_SD.highlight.txt", sep = '\t', header = TRUE)
+LL_SL_highlight_75 <- read.table("LL_SL.highlight.txt", sep = '\t', header = TRUE)
 
-LD_LL_genes <- unique(c(LD_LL_up$ID, LD_LL_down$ID))
-LD_SD_genes <- unique(c(LD_SD_up$ID, LD_SD_down$ID))
-LL_SL_genes <- unique(c(LL_SL_up$ID, LL_SL_down$ID))
-SD_SL_genes <- unique(c(SD_SL_up$ID, SD_SL_down$ID))
+LD_SD_genes <- unique(LD_SD_highlight_75$ID)
+LL_SL_genes <- unique(LL_SL_highlight_75$ID)
 
 # 保存为 CSV 文件
-write.csv(LD_LL_genes, "LD_LL_genes.csv", row.names = FALSE)
 write.csv(LD_SD_genes, "LD_SD_genes.csv", row.names = FALSE)
 write.csv(LL_SL_genes, "LL_SL_genes.csv", row.names = FALSE)
-write.csv(SD_SL_genes, "SD_SL_genes.csv", row.names = FALSE)
+
+write.csv(unique_groups, "unique_groups.csv", row.names = FALSE)
+
+
+library(clusterProfiler)
+library(dplyr)
+library(tidyr)
+
+
+# 提取基因ID（确保是字符向量）
+up_genes <- as.character(LL_SL_up$gene_name)  # 使用基因名称而不是基因ID
+down_genes <- as.character(LL_SL_down$gene_name)  # 使用基因名称而不是基因ID
+up_genes <- up_genes[!is.na(up_genes)]
+down_genes <- down_genes[!is.na(down_genes)]
+
+#up_genes <- as.character(LD_SD_up$gene_name)  # 使用基因名称而不是基因ID
+#down_genes <- as.character(LD_SD_down$gene_name)  # 使用基因名称而不是基因ID
+#up_genes <- up_genes[!is.na(up_genes)]
+#down_genes <- down_genes[!is.na(down_genes)]
+
+total_gene <- c(up_genes,down_genes)
+library(org.At.tair.db)
+go_up <- enrichGO(gene = up_genes,
+           OrgDb = org.At.tair.db,  # 使用拟南芥的注释包
+           keyType = "SYMBOL",  # 根据基因名称进行富集分析
+           ont = "BP",  # 生物过程
+           pvalueCutoff = 0.4,
+           pAdjustMethod = "BH",
+           qvalueCutoff = 0.4)
+dim(go_up)
+
+go_down <- enrichGO(gene = down_genes,
+                  OrgDb = org.At.tair.db,  # 使用拟南芥的注释包
+                  keyType = "SYMBOL",  # 根据基因名称进行富集分析
+                  ont = "BP",  # 生物过程
+                  pvalueCutoff = 0.4,
+                  pAdjustMethod = "BH",
+                  qvalueCutoff = 0.4)
+dim(go_down)
+
+
+#结果可视化 
+LL_SL_up_bar <- barplot(go_up,showCategory=10,drop=T) 
+LL_SL_up_bar <- LL_SL_up_bar + theme(
+  axis.text.y = element_text(size = 8)  # 调整 y 轴标签的字体大小
+)
+LL_SL_up_bar
+ggsave(filename = "LL_SL_GO_Enrichment_Upregulated_Bar_Adjusted_Font.png", plot = LL_SL_up_bar)
+LL_SL_up_dot <- dotplot(go_up,showCategory=10)
+LL_SL_up_dot <- LL_SL_up_dot + theme(
+  axis.text.y = element_text(size = 8)  # 调整 y 轴标签的字体大小
+)
+LL_SL_up_dot
+ggsave(filename = "LL_SL_GO_Enrichment_Upregulated_Dot_Adjusted_Font.png", plot = LL_SL_up_dot)
+
+
+LL_SL_down_bar <- barplot(go_down,showCategory=15,drop=T) 
+LL_SL_down_bar <- LL_SL_down_bar + theme(
+  axis.text.y = element_text(size = 8)  # 调整 y 轴标签的字体大小
+)
+LL_SL_down_bar
+ggsave(filename = "LL_SL_GO_Enrichment_Downregulated_Bar_Adjusted_Font.png", plot = LL_SL_down_bar)
+LL_SL_down_dot <- dotplot(go_down,showCategory=15)
+LL_SL_down_dot <- LL_SL_down_dot + theme(
+  axis.text.y = element_text(size = 8)  # 调整 y 轴标签的字体大小
+)
+LL_SL_down_dot
+ggsave(filename = "LL_SL_GO_Enrichment_Downregulated_Dot_Adjusted_Font.png", plot = LL_SL_down_dot)
 
 
 
 
 
+# 提取基因ID（确保是字符向量）
+up_genes <- as.character(LD_SD_up$gene_name)  # 使用基因名称而不是基因ID
+down_genes <- as.character(LD_SD_down$gene_name)  # 使用基因名称而不是基因ID
+up_genes <- up_genes[!is.na(up_genes)]
+down_genes <- down_genes[!is.na(down_genes)]
+library(org.At.tair.db)
+go_up <- enrichGO(gene = up_genes,
+                  OrgDb = org.At.tair.db,  # 使用拟南芥的注释包
+                  keyType = "SYMBOL",  # 根据基因名称进行富集分析
+                  ont = "BP",  # 生物过程
+                  pvalueCutoff = 0.4,
+                  pAdjustMethod = "BH",
+                  qvalueCutoff = 0.4)
+dim(go_up)
+
+go_down <- enrichGO(gene = down_genes,
+                    OrgDb = org.At.tair.db,  # 使用拟南芥的注释包
+                    keyType = "SYMBOL",  # 根据基因名称进行富集分析
+                    ont = "BP",  # 生物过程
+                    pvalueCutoff = 0.4,
+                    pAdjustMethod = "BH",
+                    qvalueCutoff = 0.4)
+dim(go_down)
 
 
+#结果可视化 
+LD_SD_up_bar <- barplot(go_up,showCategory=10,drop=T) 
+LD_SD_up_bar <- LL_SL_up_bar + theme(
+  axis.text.y = element_text(size = 8)  # 调整 y 轴标签的字体大小
+)
+LD_SD_up_bar
+ggsave(filename = "LD_SD_GO_Enrichment_Upregulated_Bar_Adjusted_Font.png", plot = LD_SD_up_bar)
+LD_SD_up_dot <- dotplot(go_up,showCategory=10)
+LD_SD_up_dot <- LD_SD_up_dot + theme(
+  axis.text.y = element_text(size = 8)  # 调整 y 轴标签的字体大小
+)
+LD_SD_up_dot
+ggsave(filename = "LD_SD_GO_Enrichment_Upregulated_Dot_Adjusted_Font.png", plot = LD_SD_up_dot)
 
 
+LD_SD_down_bar <- barplot(go_down,showCategory=15,drop=T) 
+LD_SD_down_bar <- LD_SD_down_bar + theme(
+  axis.text.y = element_text(size = 8)  # 调整 y 轴标签的字体大小
+)
+LD_SD_down_bar
+ggsave(filename = "LD_SD_GO_Enrichment_Downregulated_Bar_Adjusted_Font.png", plot = LD_SD_down_bar)
+LD_SD_down_dot <- dotplot(go_down,showCategory=15)
+LD_SD_down_dot <- LD_SD_down_dot + theme(
+  axis.text.y = element_text(size = 8)  # 调整 y 轴标签的字体大小
+)
+LD_SD_down_dot
+ggsave(filename = "LD_SD_GO_Enrichment_Downregulated_Dot_Adjusted_Font.png", plot = LD_SD_down_dot)
 
+
+BiocManager::install("GENIE3")
+library(GENIE3)
+SD_SL_highlight_75 <- read.table("SD_SL.highlight.txt", sep = '\t', header = TRUE)
+LD_LL_highlight_75 <- read.table("LD_LL.highlight.txt", sep = '\t', header = TRUE)
+
+SD_SL_genes <- unique(SD_SL_highlight_75$ID)
+LD_LL_genes <- unique(LD_LL_highlight_75$ID)
+
+combined_genes <- c(SD_SL_genes, LD_LL_genes, LL_SL_genes, LD_SD_genes)
+combined_genes <- unique(combined_genes)
+
+#LL_SL_expression_data <- DataMatrix[rownames(DataMatrix) %in% LL_SL_genes, ]
+#LD_SD_expression_data <- DataMatrix[rownames(DataMatrix) %in% LD_SD_genes, ]
+expression_data <- DataMatrix[rownames(DataMatrix) %in% combined_genes, ]
+
+LL_SL_TF_list <- read.table("LL_SL_TF.list.txt", header = FALSE, stringsAsFactors = FALSE)
+LD_SD_TF_list <- read.table("LD_SD_TF.list.txt", header = FALSE, stringsAsFactors = FALSE)
+SD_SL_TF_list <- read.table("SD_SL_TF.list.txt", header = FALSE, stringsAsFactors = FALSE)
+LD_LL_TF_list <- read.table("LD_LL_TF.list.txt", header = FALSE, stringsAsFactors = FALSE)
+LL_SL_TF_list$V1 <- sub("\\.\\d+$", "", LL_SL_TF_list$V1)
+LD_SD_TF_list$V1 <- sub("\\.\\d+$", "", LD_SD_TF_list$V1)
+SD_SL_TF_list$V1 <- sub("\\.\\d+$", "", SD_SL_TF_list$V1)
+LD_LL_TF_list$V1 <- sub("\\.\\d+$", "", LD_LL_TF_list$V1)
+
+#LL_SL_TF_ids <- as.character(LL_SL_TF_list$V1)
+#LD_SD_TF_ids <- as.character(LD_SD_TF_list$V1)
+#SD_SL_TF_ids <- as.character(SD_SL_TF_list$V1)
+#LD_LL_TF_ids <- as.character(LD_LL_TF_list$V1)
+#TF_ids <- c(LL_SL_TF_ids,LD_SD_TF_ids,SD_SL_TF_ids,LD_LL_TF_ids)
+
+TF_list <- rbind(LL_SL_TF_list, LD_SD_TF_list, SD_SL_TF_list, LD_LL_TF_list)
+TF_list <- TF_list[!duplicated(TF_list$V1), ]
+TF_ids <- as.character(TF_list$V1)
+
+# 构建基因调控网络
+#LL_SL_weight_matrix <- GENIE3(as.matrix(LL_SL_expression_data), regulators = LL_SL_TF_ids)
+#LD_SD_weight_matrix <- GENIE3(as.matrix(LD_SD_expression_data), regulators = LD_SD_TF_ids)
+
+weight_matrix <- GENIE3(as.matrix(expression_data), regulators = TF_ids)
+
+# 提取边列表
+#LL_SL_link_list <- getLinkList(LL_SL_weight_matrix, threshold = 0.001)
+#LD_SD_link_list <- getLinkList(LD_SD_weight_matrix, threshold = 0.001)
+link_list <- getLinkList(weight_matrix, threshold = 0.001)
+
+#gene_annotations$gene_name[is.na(gene_annotations$gene_name)] <- "unknown"
+na_indices <- which(is.na(gene_annotations$gene_name))
+unique_na <- paste0("unknown_", seq_along(na_indices))
+gene_annotations$gene_name[na_indices] <- unique_na
+
+#LL_SL_link_list$regulatoryGene <- gene_annotations$gene_name[match(LL_SL_link_list$regulatoryGene, gene_annotations$ID)]
+#LL_SL_link_list$targetGene <- gene_annotations$gene_name[match(LL_SL_link_list$targetGene, gene_annotations$ID)]
+
+#LD_SD_link_list$regulatoryGene <- gene_annotations$gene_name[match(LD_SD_link_list$regulatoryGene, gene_annotations$ID)]
+#LD_SD_link_list$targetGene <- gene_annotations$gene_name[match(LD_SD_link_list$targetGene, gene_annotations$ID)]
+link_list$regulatoryGene <- gene_annotations$gene_name[match(link_list$regulatoryGene, gene_annotations$ID)]
+link_list$targetGene <- gene_annotations$gene_name[match(link_list$targetGene, gene_annotations$ID)]
+
+# 保存结果
+#write.csv(LL_SL_link_list, "LL_SL_gene_regulatory_network.csv", row.names = FALSE)
+#write.csv(LD_SD_link_list, "LD_SD_gene_regulatory_network.csv", row.names = FALSE)
+write.csv(link_list, "gene_regulatory_network.csv", row.names = FALSE)
 
 
 
