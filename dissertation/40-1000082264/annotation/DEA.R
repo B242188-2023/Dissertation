@@ -111,10 +111,10 @@ for (comparison in names(comparisons)) {
               #'AeUmb.TA1851.r1.6UG0050370')
   #target_genes <- merged_results %>% filter(merged_results$ensembl_gene_id %in% target)
 
-  #默认情况下，横轴展示 log2FoldChange，纵轴展示 -log10 转化后的 padj
+  # 横轴展示 log2FoldChange，纵轴展示 -log10 转化后的 padj
   p <- ggplot(data = res1, aes(x = log2FoldChange, y = -log10(padj), color = sig)) +
     geom_point(alpha = 0.4, size = 2) +
-    scale_color_manual(values = c("#ff4757", "#d2dae2", "#546de5"), limits = c('up', 'none', 'down')) +
+    scale_color_manual(values = c("#  ff4757", "#d2dae2", "#546de5"), limits = c('up', 'none', 'down')) +
     labs(x = 'log2 Fold Change', y = '-log10 adjust p-value', title = paste(comparison, 'Comparison'), color = '') +
     theme(plot.title = element_text(hjust = 0.5, size = 14), panel.grid = element_blank(),
           panel.background = element_rect(color = 'black', fill = 'transparent'),
@@ -238,14 +238,14 @@ library(dplyr)
 library(tidyr)
 
 
-# 提取基因ID（确保是字符向量）
-up_genes <- as.character(LL_SL_up$gene_name)  # 使用基因名称而不是基因ID
-down_genes <- as.character(LL_SL_down$gene_name)  # 使用基因名称而不是基因ID
+# 提取基因ID（字符向量）
+up_genes <- as.character(LL_SL_up$gene_name)  
+down_genes <- as.character(LL_SL_down$gene_name)  
 up_genes <- up_genes[!is.na(up_genes)]
 down_genes <- down_genes[!is.na(down_genes)]
 
-#up_genes <- as.character(LD_SD_up$gene_name)  # 使用基因名称而不是基因ID
-#down_genes <- as.character(LD_SD_down$gene_name)  # 使用基因名称而不是基因ID
+#up_genes <- as.character(LD_SD_up$gene_name) 
+#down_genes <- as.character(LD_SD_down$gene_name) 
 #up_genes <- up_genes[!is.na(up_genes)]
 #down_genes <- down_genes[!is.na(down_genes)]
 
@@ -302,9 +302,9 @@ ggsave(filename = "LL_SL_GO_Enrichment_Downregulated_Dot_Adjusted_Font.png", plo
 
 
 
-# 提取基因ID（确保是字符向量）
-up_genes <- as.character(LD_SD_up$gene_name)  # 使用基因名称而不是基因ID
-down_genes <- as.character(LD_SD_down$gene_name)  # 使用基因名称而不是基因ID
+# 提取基因ID（字符向量）
+up_genes <- as.character(LD_SD_up$gene_name)  
+down_genes <- as.character(LD_SD_down$gene_name)  
 up_genes <- up_genes[!is.na(up_genes)]
 down_genes <- down_genes[!is.na(down_genes)]
 library(org.At.tair.db)
